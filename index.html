@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Chat</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h2>Simple Chat</h2>
+  <input type="password" id="password" placeholder="Enter password" />
+  <button onclick="loadMessages()">Load Messages</button>
+  <div id="notifications"></div>
+  <div id="chatBox"></div>
+  <input type="text" id="sender" placeholder="Your Name" />
+  <input type="text" id="message" placeholder="Type a message..." />
+  <button onclick="sendMessage()">Send</button>
+
+  <script>
+    const correctPassword = "chat123"; // change as needed
+
+    async function loadMessages() {
+      const pass = document.getElementById("password").value;
+      const res = await fetch("/api/chat");
+      const data = await res.json();
+
+      const box = document.getElementById("chatBox");
+      box.innerHTML = "";
+
+      if (pass === correctPassword) {
+        data.messages.forEach(msg => {
+          box.innerHTML += `<p><strong>${msg.sender}:</strong> ${msg.text}</p>`;
+        });
+      } else {
+        box.innerHTML = `<p>You have ${data.messages.length} new messages. Enter password to view.</p>`;
+      }
+    }
+
+    async function sendMessage() {
+      const sender = document.getElementById("sender").value;
+      const message = document.getElementById("message").value;
+
+      if (!sender || !message) return alert("Sender and message are required.");
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sender, text: message })
+      });
+
+      const data = await res.json();
+      notify(`${sender} sent a message`);
+      loadMessages();
+    }
+
+    function notify(msg) {
+      if (Notification.permission === "granted") {
+        new Notification(msg);
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") new Notification(msg);
+        });
+      }
+    }
+
+    setInterval(loadMessages, 5000); // auto-refresh every 5 sec
+  </script>
+</body>
+</html>
