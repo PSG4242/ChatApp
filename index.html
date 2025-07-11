@@ -23,7 +23,6 @@
     <div id="messages"></div>
     <input type="text" id="msgInput" placeholder="Type a message" />
     <button onclick="sendMessage()">Send</button>
-    <button onclick="viewLast5Messages()">🔐 View Last 5</button>
   </div>
 
   <script>
@@ -34,7 +33,6 @@
 
     let currentUser = "";
     let currentPass = "";
-    let lastMessageCount = 0;
 
     async function login() {
       currentUser = prompt("Enter username (user1 or user2):").trim();
@@ -80,17 +78,6 @@
       const container = document.getElementById("messages");
       container.innerHTML = "";
 
-      const myMessages = data.messages.filter(m => m.receiver === currentUser);
-
-      // Mark as seen and remove
-      if (myMessages.length > 0) {
-        await fetch("/api/chat", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ receiver: currentUser })
-        });
-      }
-
       data.messages.forEach(msg => {
         const div = document.createElement("div");
         div.className = "message " + (msg.sender === currentUser ? "sender" : "receiver");
@@ -113,27 +100,6 @@
 
       input.value = "";
       loadMessages();
-    }
-
-    async function viewLast5Messages() {
-      const verify = prompt("Re-enter password to view last 5 messages:");
-      if (verify !== USERS[currentUser]) {
-        alert("❌ Incorrect password.");
-        return;
-      }
-
-      const res = await fetch("/api/chat");
-      const data = await res.json();
-      const container = document.getElementById("messages");
-      container.innerHTML = "<h4>Last 5 messages:</h4>";
-
-      const recent = data.messages.slice(-5);
-      recent.forEach(msg => {
-        const div = document.createElement("div");
-        div.className = "message " + (msg.sender === currentUser ? "sender" : "receiver");
-        div.textContent = `${msg.sender}: ${msg.text}`;
-        container.appendChild(div);
-      });
     }
 
     window.addEventListener("beforeunload", () => updateStatus("offline"));
