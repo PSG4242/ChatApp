@@ -1,8 +1,9 @@
+// index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Two-User Secure Chat</title>
   <style>
     body { font-family: sans-serif; background: #f0f0f0; padding: 20px; }
@@ -19,10 +20,13 @@
   <div class="chat-box">
     <h2>🔐 Two-User Secure Chat</h2>
     <div id="status" class="status"></div>
-    <div id="messages"></div>
+    <div id="messages" style="max-height: 300px; overflow-y: auto;"></div>
     <input type="text" id="msgInput" placeholder="Type a message" />
     <button onclick="sendMessage()">Send</button>
+    <button onclick="downloadMessages()">📥 Download</button>
+    <button onclick="deleteMessages()">🗑️ Delete All</button>
   </div>
+  <audio id="notifySound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
 
   <script>
     const USERS = {
@@ -31,19 +35,19 @@
     };
 
     let currentUser = "";
-    let currentPass = "";
+    let lastMessageLength = 0;
 
     async function login() {
-      currentUser = prompt("Enter username (user1 or user2):").trim();
-      currentPass = prompt("Enter your password:").trim();
+      const user = prompt("Enter username (user1 or user2):").trim();
+      const pass = prompt("Enter your password:").trim();
 
-      if (USERS[currentUser] !== currentPass) {
+      if (USERS[user] !== pass) {
         alert("Incorrect username or password.");
-        login();
-        return;
+        return login();
       }
 
-      sessionStorage.setItem("chat_user", currentUser);
+      sessionStorage.setItem("chat_user", user);
+      currentUser = user;
       await updateStatus("online");
       loadMessages();
       fetchStatus();
@@ -52,6 +56,7 @@
     }
 
     async function updateStatus(status) {
+      if (!currentUser) return;
       await fetch("/api/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,6 +80,9 @@
       const res = await fetch("/api/chat");
       const data = await res.json();
       const container = document.getElementById("messages");
+      const notifySound = document.getElementById("notifySound");
+      const prevLength = container.children.length;
+
       container.innerHTML = "";
 
       data.messages.forEach(msg => {
@@ -83,6 +91,14 @@
         div.textContent = `${msg.sender}: ${msg.text}`;
         container.appendChild(div);
       });
+
+      // Auto scroll to bottom
+      container.scrollTop = container.scrollHeight;
+
+      // Play notification if new message received
+      if (container.children.length > prevLength) {
+        notifySound.play();
+      }
     }
 
     async function sendMessage() {
@@ -101,11 +117,38 @@
       loadMessages();
     }
 
+    async function downloadMessages() {
+      const res = await fetch("/api/chat");
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "chat_history.json";
+      link.click();
+    }
+
+    async function deleteMessages() {
+      if (!confirm("Are you sure you want to delete all messages?")) return;
+      await fetch("/api/chat", {
+        method: "DELETE"
+      });
+      loadMessages();
+    }
+
     window.addEventListener("beforeunload", () => updateStatus("offline"));
     window.addEventListener("blur", () => updateStatus("offline"));
     window.addEventListener("focus", () => updateStatus("online"));
 
-    login();
+    if (!sessionStorage.getItem("chat_user")) {
+      login();
+    } else {
+      currentUser = sessionStorage.getItem("chat_user");
+      updateStatus("online");
+      loadMessages();
+      fetchStatus();
+      setInterval(loadMessages, 5000);
+      setInterval(fetchStatus, 10000);
+    }
   </script>
 </body>
 </html>
