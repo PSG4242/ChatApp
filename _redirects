@@ -1,1 +1,2 @@
-/api/*  /.netlify/functions/:splat  200
+/api/chat    /.netlify/functions/chat
+/api/status  /.netlify/functions/status

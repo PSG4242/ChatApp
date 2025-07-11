@@ -1,26 +1,43 @@
-import fs from "fs";
-import path from "path";
+const fs = require("fs");
+const path = require("path");
+const filePath = path.join(__dirname, "..", "..", "messages.json");
 
-const filePath = path.join(process.cwd(), "messages.json");
+exports.handler = async (event) => {
+  const method = event.httpMethod;
 
-export default async function handler(req, res) {
-  const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  if (method === "GET") {
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    return { statusCode: 200, body: JSON.stringify(data) };
+  }
 
-  if (req.method === "GET") {
-    res.status(200).json({ messages: data.messages });
-  } else if (req.method === "POST") {
-    const { sender, text } = req.body;
+  if (method === "POST") {
+    const { sender, receiver, text } = JSON.parse(event.body);
+    if (!sender || !receiver || !text)
+      return { statusCode: 400, body: JSON.stringify({ error: "Missing fields" }) };
 
-    if (!sender || !text) return res.status(400).json({ error: "Invalid" });
+    let data = { messages: [] };
+    if (fs.existsSync(filePath)) {
+      data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    }
 
-    data.messages.push({ sender, text, time: new Date().toISOString() });
-
-    // Keep only last 10 messages
-    data.messages = data.messages.slice(-10);
+    data.messages.push({ sender, receiver, text, time: new Date().toISOString() });
+    if (data.messages.length > 10) data.messages = data.messages.slice(-10);
 
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    res.status(200).json({ success: true });
-  } else {
-    res.status(405).end();
+    return { statusCode: 200, body: JSON.stringify({ success: true }) };
   }
-}
+
+  if (method === "DELETE") {
+    const { receiver } = JSON.parse(event.body);
+    let data = { messages: [] };
+    if (fs.existsSync(filePath)) {
+      data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    }
+
+    data.messages = data.messages.filter(msg => msg.receiver !== receiver);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    return { statusCode: 200, body: JSON.stringify({ success: true }) };
+  }
+
+  return { statusCode: 405, body: "Method Not Allowed" };
+};
