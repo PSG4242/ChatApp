@@ -27,17 +27,5 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: JSON.stringify({ success: true }) };
   }
 
-  if (method === "DELETE") {
-    const { receiver } = JSON.parse(event.body);
-    let data = { messages: [] };
-    if (fs.existsSync(filePath)) {
-      data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    }
-
-    data.messages = data.messages.filter(msg => msg.receiver !== receiver);
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    return { statusCode: 200, body: JSON.stringify({ success: true }) };
-  }
-
   return { statusCode: 405, body: "Method Not Allowed" };
 };
