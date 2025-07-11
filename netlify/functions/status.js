@@ -1,6 +1,7 @@
 const fs = require("fs");
-const path = require("path");
+const path = require("path"); // ✅ THIS LINE WAS MISSING
 const statusPath = path.join(__dirname, "..", "..", "status.json");
+
 
 exports.handler = async (event) => {
   const method = event.httpMethod;
