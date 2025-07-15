@@ -286,6 +286,19 @@
         console.log("Firebase Config:", firebaseConfig);
         console.log("Initial Auth Token available:", initialAuthToken ? "Yes" : "No");
 
+        // --- Added check for projectId in firebaseConfig ---
+        if (!firebaseConfig.projectId) {
+            console.error("CRITICAL ERROR: Firebase 'projectId' is missing from the configuration. Please ensure your Canvas environment is correctly linked to a Firebase project.");
+            // You might want to display a user-friendly message here instead of just logging
+            document.getElementById('loadingOverlay').style.display = 'none'; // Hide loading
+            document.getElementById('passwordModal').style.display = 'flex'; // Show password modal
+            document.getElementById('passwordError').textContent = "Firebase connection failed. Project ID missing. Check console for details.";
+            document.getElementById('passwordError').classList.remove('hidden');
+            // Prevent further execution if config is bad
+            throw new Error("Firebase 'projectId' missing."); 
+        }
+        // --- End of added check ---
+
         let app;
         let db;
         let auth;
