@@ -177,11 +177,17 @@
 
         /* Responsive adjustments */
         @media (max-width: 768px) {
+            html, body {
+                box-sizing: border-box; /* Ensure consistent box model */
+                height: 100%; /* Full height for body */
+                overflow: hidden; /* Prevent body scroll if container handles it */
+            }
             .chat-container {
                 flex-direction: column;
-                margin: 0;
-                height: 100vh;
-                border-radius: 0;
+                margin: 0; /* Remove margin on small screens */
+                height: 100vh; /* Take full viewport height */
+                border-radius: 0; /* No rounded corners on full-screen mobile */
+                box-shadow: none; /* Remove shadow for full-screen apps */
             }
             .sidebar {
                 width: 100%;
@@ -208,6 +214,8 @@
                 white-space: nowrap; /* Prevent wrapping of user items */
                 padding: 0.5rem 0;
                 border-bottom: 1px solid #dcdcdc;
+                justify-content: flex-start; /* Align items to start */
+                align-items: flex-start; /* Align items to top */
             }
             .user-list-item {
                 display: inline-flex; /* Display horizontally */
@@ -219,16 +227,26 @@
                 width: auto; /* Allow content width */
                 min-width: 80px; /* Ensure minimum width for touch target */
                 flex-shrink: 0; /* Prevent shrinking */
+                margin: 0 0.25rem; /* Small horizontal margin between items */
             }
             .user-list-item span {
                 font-size: 0.7rem; /* Smaller font for status */
             }
             .user-list-item .font-medium {
                 font-size: 0.9rem; /* Slightly larger for name */
+                text-align: center; /* Center name under dot */
+                white-space: normal; /* Allow name to wrap if too long */
             }
             .status-dot {
                 margin-right: 0; /* Remove margin to center dot above name */
                 margin-bottom: 0.2rem; /* Space between dot and name */
+            }
+
+            .chat-area {
+                width: 100%;
+                flex-grow: 1;
+                display: flex; /* Ensure flex column for chat area */
+                flex-direction: column;
             }
 
             .chat-area-header { /* Chat header */
@@ -242,19 +260,33 @@
                 width: 100%; /* Full width button */
             }
 
+            .messages {
+                flex-grow: 1; /* Allow messages to take remaining space */
+                padding: 0.5rem; /* Slightly less padding */
+            }
+
+            .message-bubble {
+                max-width: 85%; /* Allow bubbles to take more width on small screens */
+                padding: 0.5rem 0.75rem; /* Slightly smaller padding */
+                font-size: 0.85rem; /* Slightly smaller font for messages */
+            }
+
             .message-input-area {
                 flex-direction: column; /* Stack input and buttons vertically */
                 align-items: stretch; /* Stretch items to full width */
+                padding: 0.75rem; /* Slightly less padding */
             }
             .message-input-area input[type="text"] {
                 margin-right: 0; /* Remove right margin */
                 margin-bottom: 0.5rem; /* Add bottom margin */
                 width: 100%; /* Ensure full width */
+                padding: 0.75rem; /* Consistent padding */
             }
             .message-input-area button {
                 width: 100%; /* Make buttons full width */
                 margin-right: 0 !important; /* Override any existing right margin */
                 margin-bottom: 0.5rem; /* Add margin between stacked buttons */
+                padding: 0.75rem 1rem; /* Adjust button padding */
             }
             .message-input-area button:last-child {
                 margin-bottom: 0; /* No bottom margin for the last button */
@@ -272,7 +304,7 @@
     <!-- Login/Password Modal -->
     <div id="passwordModal" class="modal">
         <div class="modal-content">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Welcome to Chat</h2>
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Welcome to ChatBox</h2>
             <p class="mb-4 text-gray-600">Please enter the access password:</p>
             <input type="password" id="accessPassword" class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Enter password">
             <button id="submitPassword" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out">Access Chat</button>
