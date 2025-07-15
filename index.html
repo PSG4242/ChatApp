@@ -44,6 +44,7 @@
             border-top: 1px solid #e0e0e0;
             display: flex;
             align-items: center;
+            gap: 0.5rem; /* Added gap for spacing buttons */
         }
         .messages {
             flex-grow: 1;
@@ -124,8 +125,10 @@
             border-radius: 0.75rem;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             text-align: center;
-            max-width: 400px;
+            max-width: 600px; /* Wider for summary */
             width: 90%;
+            max-height: 80vh; /* Limit height */
+            overflow-y: auto; /* Scroll if content overflows */
         }
         .loading-overlay {
             display: flex;
@@ -172,6 +175,14 @@
             .chat-area {
                 width: 100%;
                 flex-grow: 1;
+            }
+            .message-input-area {
+                flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+                justify-content: center;
+            }
+            .message-input-area button {
+                flex-grow: 1; /* Allow buttons to take more space */
+                margin-top: 0.5rem; /* Add some top margin for wrapped buttons */
             }
             .user-list-item {
                 flex-grow: 1;
@@ -222,6 +233,15 @@
         </div>
     </div>
 
+    <!-- Summary Modal -->
+    <div id="summaryModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Chat Summary ✨</h2>
+            <p id="summaryText" class="mb-6 text-gray-700 text-left whitespace-pre-wrap"></p>
+            <button id="closeSummaryModal" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out">Close</button>
+        </div>
+    </div>
+
     <!-- Main Chat Interface -->
     <div id="chatInterface" class="chat-container hidden">
         <!-- Sidebar for User List -->
@@ -264,6 +284,9 @@
             </div>
             <div class="message-input-area">
                 <input type="text" id="messageInput" class="flex-grow p-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 mr-3" placeholder="Type a message...">
+                <button id="summarizeChatButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-5 rounded-full transition duration-200 ease-in-out flex items-center justify-center">
+                    <i class="fas fa-magic mr-2"></i> ✨ Summarize Chat
+                </button>
                 <button id="sendMessage" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-5 rounded-full transition duration-200 ease-in-out flex items-center justify-center">
                     <i class="fas fa-paper-plane"></i>
                 </button>
@@ -275,7 +298,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, limit, serverTimestamp, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- START: Firebase Configuration for Netlify Deployment ---
         // These are your actual Firebase project configuration details.
@@ -313,7 +336,8 @@
         let auth;
         let currentUserId = null; // Firebase Auth UID
         let selectedUser = null; // "user1" or "user2"
-        let currentSessionId = null; // Unique ID for the current chat session
+        // Define a fixed currentSessionId for a shared chat room
+        const currentSessionId = 'main_two_user_chat'; // <--- FIXED CHAT ROOM ID
 
         // DOM Elements
         const loadingOverlay = document.getElementById('loadingOverlay');
@@ -335,8 +359,14 @@
         const dotUser1 = document.getElementById('dotUser1');
         const lastSeenUser1 = document.getElementById('lastSeenUser1');
         const dotUser2 = document.getElementById('dotUser2');
-        const lastSeenUser2 = document.getElementById('lastSeenUser2');
+        const lastSeenUser2 = document.getElementById('lastSeenUser2'); 
         const logoutButton = document.getElementById('logoutButton');
+        // New DOM elements for summary feature
+        const summarizeChatButton = document.getElementById('summarizeChatButton');
+        const summaryModal = document.getElementById('summaryModal');
+        const summaryText = document.getElementById('summaryText');
+        const closeSummaryModalButton = document.getElementById('closeSummaryModal');
+
 
         // --- Utility Functions ---
         function showLoading() {
@@ -355,12 +385,13 @@
             modalElement.style.display = 'none';
         }
 
-        function generateUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-        }
+        // Removed generateUUID as it's no longer needed for currentSessionId
+        // function generateUUID() {
+        //     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        //         var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        //         return v.toString(16);
+        //     });
+        // }
 
         function formatTimestamp(timestamp) {
             if (!timestamp) return '';
@@ -391,6 +422,7 @@
                 console.log("Firebase app, db, and auth initialized.");
 
                 // For Netlify, we rely on anonymous sign-in
+                console.log("Attempting anonymous sign-in with auth object:", auth); // Added log
                 await signInAnonymously(auth);
                 console.log("Signed in anonymously.");
 
@@ -414,17 +446,21 @@
 
             } catch (error) {
                 console.error("Error initializing Firebase or signing in:", error);
-                alert("Failed to initialize chat. Please check console for details.");
+                // More specific error message for auth/configuration-not-found
+                if (error.code === 'auth/configuration-not-found') {
+                    alert("Firebase Authentication Error: Anonymous sign-in is not enabled for your project. Please go to Firebase Console > Authentication > Sign-in method and enable 'Anonymous' provider.");
+                } else {
+                    alert("Failed to initialize chat. Please check console for details.");
+                }
                 hideLoading();
             }
         }
 
         async function checkApplicationAccess() {
-            const storedSessionId = sessionStorage.getItem('chatSessionId');
+            // currentSessionId is now a constant, so we just need to check if selectedUser is stored
             const storedSelectedUser = sessionStorage.getItem('selectedUser');
 
-            if (storedSessionId && storedSelectedUser) {
-                currentSessionId = storedSessionId;
+            if (storedSelectedUser) {
                 selectedUser = storedSelectedUser;
                 currentUserDisplay.textContent = selectedUser === 'user1' ? 'User 1' : 'User 2';
                 console.log("Resuming session:", currentSessionId, "as", selectedUser);
@@ -434,7 +470,7 @@
                 chatInterface.classList.remove('hidden');
                 updateOnlineStatus(true); // Set user online
             } else {
-                // If no session, force password entry
+                // If no user selected, force password entry
                 showPasswordModal();
             }
         }
@@ -503,10 +539,9 @@
         function selectUser(user) {
             selectedUser = user;
             currentUserDisplay.textContent = user === 'user1' ? 'User 1' : 'User 2';
-            currentSessionId = generateUUID(); // Generate new session ID for new chat
-            sessionStorage.setItem('chatSessionId', currentSessionId);
+            // currentSessionId is now a constant, no need to generate or store it here
             sessionStorage.setItem('selectedUser', selectedUser);
-            console.log("New session started:", currentSessionId, "as", selectedUser);
+            console.log("User selected:", selectedUser, "for chat room:", currentSessionId);
 
             hideModal(userSelectModal);
             chatInterface.classList.remove('hidden');
@@ -543,8 +578,8 @@
             const text = messageInput.value.trim();
             if (text === '') return;
 
-            if (!db || !currentSessionId || !selectedUser) {
-                console.error("Firebase not initialized or session/user not set. Cannot send message.");
+            if (!db || !selectedUser) { // currentSessionId is now a constant
+                console.error("Firebase not initialized or user not set. Cannot send message.");
                 alert("Chat not ready. Please refresh and log in.");
                 return;
             }
@@ -565,8 +600,8 @@
         }
 
         function setupChatListeners() {
-            if (!db || !currentSessionId) {
-                console.warn("Firestore not ready for listeners or session not set.");
+            if (!db) { // currentSessionId is now a constant
+                console.warn("Firestore not ready for listeners.");
                 return;
             }
 
@@ -578,11 +613,12 @@
 
             onSnapshot(messagesQuery, (snapshot) => {
                 console.log("Messages snapshot received. Changes:", snapshot.docChanges().length);
-                snapshot.docChanges().forEach(change => {
-                    if (change.type === "added") {
-                        displayMessage(change.doc.data());
-                    }
+                // Clear existing messages to re-render all messages from the shared chat room
+                messagesContainer.innerHTML = '';
+                snapshot.docs.forEach(doc => {
+                    displayMessage(doc.data());
                 });
+                messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to bottom
             }, (error) => {
                 console.error("Error listening to messages:", error);
                 alert("Failed to load messages. Check console.");
@@ -591,16 +627,6 @@
             // Listen for status changes of both users
             const user1StatusRef = doc(db, `artifacts/${appId}/public/data/users`, 'user1');
             const user2StatusRef = doc(db, `artifacts/${appId}/public/data/users`, 'user2');
-
-            onSnapshot(user2StatusRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    updateUserStatusUI('user2', data.onlineStatus, data.lastSeen);
-                    console.log("User 2 status updated:", data);
-                } else {
-                    console.log("User 2 status document does not exist yet.");
-                }
-            }, (error) => console.error("Error listening to user2 status:", error));
 
             onSnapshot(user1StatusRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -611,6 +637,16 @@
                     console.log("User 1 status document does not exist yet.");
                 }
             }, (error) => console.error("Error listening to user1 status:", error));
+
+            onSnapshot(user2StatusRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    updateUserStatusUI('user2', data.onlineStatus, data.lastSeen);
+                    console.log("User 2 status updated:", data);
+                } else {
+                    console.log("User 2 status document does not exist yet.");
+                }
+            }, (error) => console.error("Error listening to user2 status:", error));
         }
 
         async function updateOnlineStatus(isOnline) {
@@ -644,6 +680,81 @@
             }
         }
 
+        // --- Gemini AI Integration for Summarization ---
+        async function summarizeChat() {
+            if (!db) { // currentSessionId is now a constant
+                alert("Chat not active. Please select a user and start chatting to summarize.");
+                return;
+            }
+
+            showLoading();
+            summaryText.textContent = "Generating summary...";
+            showModal(summaryModal);
+
+            try {
+                const messagesQuery = query(
+                    collection(db, `artifacts/${appId}/public/data/chats/${currentSessionId}/messages`),
+                    orderBy('timestamp', 'desc'), // Get most recent messages first
+                    limit(20) // Limit to the last 20 messages for summarization context
+                );
+                const querySnapshot = await getDocs(messagesQuery); // Use getDocs for a one-time fetch
+
+                if (querySnapshot.empty) {
+                    summaryText.textContent = "No messages to summarize yet.";
+                    hideLoading();
+                    return;
+                }
+
+                let chatHistoryForLLM = "";
+                // Reverse the order to feed to LLM from oldest to newest for better context
+                const messages = querySnapshot.docs.map(doc => doc.data()).reverse();
+
+                messages.forEach(msg => {
+                    chatHistoryForLLM += `${msg.sender}: ${msg.text}\n`;
+                });
+
+                const prompt = `Please summarize the following chat conversation:\n\n${chatHistoryForLLM}\nSummary:`;
+
+                const apiKey = ""; // Canvas will provide this automatically, or it's empty for Netlify
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }]
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("Gemini API error:", errorData);
+                    throw new Error(`Gemini API responded with status ${response.status}: ${errorData.error.message || 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                console.log("Gemini API response:", result);
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    summaryText.textContent = text;
+                } else {
+                    summaryText.textContent = "Could not generate summary. No valid response from AI.";
+                    console.warn("Unexpected Gemini API response structure:", result);
+                }
+
+            } catch (error) {
+                console.error("Error summarizing chat:", error);
+                summaryText.textContent = `Error generating summary: ${error.message}`;
+            } finally {
+                hideLoading();
+            }
+        }
+
         // --- Event Listeners ---
         submitPasswordButton.addEventListener('click', verifyPassword);
         accessPasswordInput.addEventListener('keypress', (e) => {
@@ -666,8 +777,7 @@
             showLoading();
             try {
                 await updateOnlineStatus(false); // Set user offline
-                sessionStorage.removeItem('chatSessionId');
-                sessionStorage.removeItem('selectedUser');
+                sessionStorage.removeItem('selectedUser'); // Only remove selected user, currentSessionId is constant
                 await signOut(auth); // Sign out from Firebase Auth
                 console.log("User logged out successfully.");
                 // onAuthStateChanged listener will handle showing password modal
@@ -679,13 +789,18 @@
             }
         });
 
+        // New event listener for the summarize button
+        summarizeChatButton.addEventListener('click', summarizeChat);
+        closeSummaryModalButton.addEventListener('click', () => hideModal(summaryModal));
+
+
         // Handle tab visibility for online status
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 updateOnlineStatus(false);
             } else {
                 // Only update to online if a user is selected and session is active
-                if (selectedUser && currentSessionId) {
+                if (selectedUser) { // currentSessionId is now a constant
                     updateOnlineStatus(true);
                 }
             }
