@@ -282,6 +282,10 @@
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
+        console.log("App ID:", appId);
+        console.log("Firebase Config:", firebaseConfig);
+        console.log("Initial Auth Token available:", initialAuthToken ? "Yes" : "No");
+
         let app;
         let db;
         let auth;
@@ -359,12 +363,15 @@
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
+                console.log("Firebase app, db, and auth initialized.");
 
                 // Sign in using the provided token or anonymously
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
+                    console.log("Signed in with custom token.");
                 } else {
                     await signInAnonymously(auth);
+                    console.log("Signed in anonymously.");
                 }
 
                 // Listen for auth state changes
@@ -433,10 +440,11 @@
 
                 if (docSnap.exists()) {
                     correctPassword = docSnap.data().password || correctPassword;
+                    console.log("Fetched existing password from Firestore.");
                 } else {
                     // If settings doc doesn't exist, create it with a default password
                     await setDoc(settingsDocRef, { password: correctPassword });
-                    console.log("Created default app settings with password.");
+                    console.log("Created default app settings with password in Firestore.");
                 }
 
                 if (enteredPassword === correctPassword) {
@@ -445,6 +453,7 @@
                     showUserSelection();
                 } else {
                     passwordError.classList.remove('hidden');
+                    console.log("Incorrect password entered.");
                 }
             } catch (error) {
                 console.error("Error verifying password:", error);
@@ -506,7 +515,7 @@
             if (text === '') return;
 
             if (!db || !currentSessionId || !selectedUser) {
-                console.error("Firebase not initialized or session/user not set.");
+                console.error("Firebase not initialized or session/user not set. Cannot send message.");
                 alert("Chat not ready. Please refresh and log in.");
                 return;
             }
@@ -519,6 +528,7 @@
                     timestamp: serverTimestamp()
                 });
                 messageInput.value = '';
+                console.log("Message sent successfully.");
             } catch (error) {
                 console.error("Error sending message:", error);
                 alert("Failed to send message. Check console.");
@@ -526,7 +536,10 @@
         }
 
         function setupChatListeners() {
-            if (!db || !currentSessionId) return;
+            if (!db || !currentSessionId) {
+                console.warn("Firestore not ready for listeners or session not set.");
+                return;
+            }
 
             // Listen for messages in the current session
             const messagesQuery = query(
@@ -535,12 +548,11 @@
             );
 
             onSnapshot(messagesQuery, (snapshot) => {
+                console.log("Messages snapshot received. Changes:", snapshot.docChanges().length);
                 snapshot.docChanges().forEach(change => {
                     if (change.type === "added") {
                         displayMessage(change.doc.data());
                     }
-                    // For modifications or deletions, you might need more complex logic
-                    // For this app, we only care about new messages
                 });
             }, (error) => {
                 console.error("Error listening to messages:", error);
@@ -555,6 +567,9 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     updateUserStatusUI('user1', data.onlineStatus, data.lastSeen);
+                    console.log("User 1 status updated:", data);
+                } else {
+                    console.log("User 1 status document does not exist yet.");
                 }
             }, (error) => console.error("Error listening to user1 status:", error));
 
@@ -562,18 +577,25 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     updateUserStatusUI('user2', data.onlineStatus, data.lastSeen);
+                    console.log("User 2 status updated:", data);
+                } else {
+                    console.log("User 2 status document does not exist yet.");
                 }
             }, (error) => console.error("Error listening to user2 status:", error));
         }
 
         async function updateOnlineStatus(isOnline) {
-            if (!db || !selectedUser) return;
+            if (!db || !selectedUser) {
+                console.warn("Firestore or selected user not ready for status update.");
+                return;
+            }
             const userStatusRef = doc(db, `artifacts/${appId}/public/data/users`, selectedUser);
             try {
                 await setDoc(userStatusRef, {
                     onlineStatus: isOnline,
                     lastSeen: isOnline ? null : serverTimestamp()
                 }, { merge: true }); // Use merge to only update specified fields
+                console.log(`User ${selectedUser} status set to ${isOnline ? 'online' : 'offline'}.`);
             } catch (error) {
                 console.error("Error updating online status:", error);
             }
@@ -618,7 +640,7 @@
                 sessionStorage.removeItem('chatSessionId');
                 sessionStorage.removeItem('selectedUser');
                 await signOut(auth); // Sign out from Firebase Auth
-                console.log("User logged out.");
+                console.log("User logged out successfully.");
                 // onAuthStateChanged listener will handle showing password modal
             } catch (error) {
                 console.error("Error during logout:", error);
