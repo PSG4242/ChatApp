@@ -1,195 +1,653 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Two User Chat</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 0;
-      background-color: #e5ddd5;
-    }
-    #loginScreen, #chatScreen {
-      display: none;
-      height: 100vh;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-    }
-    #chatScreen {
-      display: flex;
-    }
-    .chat-box {
-      width: 100%;
-      max-width: 600px;
-      background: white;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    .header {
-      background: #075e54;
-      color: white;
-      padding: 1em;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .messages {
-      flex: 1;
-      padding: 1em;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5em;
-    }
-    .input-box {
-      display: flex;
-      border-top: 1px solid #ccc;
-    }
-    .input-box input {
-      flex: 1;
-      padding: 1em;
-      border: none;
-      outline: none;
-    }
-    .input-box button {
-      padding: 1em;
-      border: none;
-      background: #128c7e;
-      color: white;
-      cursor: pointer;
-    }
-    .message.self {
-      align-self: flex-end;
-      background: #dcf8c6;
-      padding: 0.5em 1em;
-      border-radius: 10px;
-    }
-    .message.other {
-      align-self: flex-start;
-      background: #fff;
-      padding: 0.5em 1em;
-      border-radius: 10px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-User Chat</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background */
+        }
+        .chat-container {
+            height: calc(100vh - 4rem); /* Full height minus some margin */
+            max-width: 1200px;
+            margin: 2rem auto;
+            display: flex;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar {
+            width: 30%;
+            min-width: 250px;
+            background-color: #e5ddd5; /* WhatsApp-like sidebar background */
+            border-right: 1px solid #c9c9c9;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-area {
+            flex-grow: 1;
+            width: 70%;
+            background-color: #f8f8f8; /* Chat background */
+            display: flex;
+            flex-direction: column;
+        }
+        .message-input-area {
+            background-color: #f0f0f0;
+            padding: 1rem;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+        }
+        .messages {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background-image: url('https://placehold.co/600x400/DCE0E3/808080?text=Chat+Background'); /* Placeholder background */
+            background-size: cover;
+            background-position: center;
+        }
+        .message-bubble {
+            max-width: 70%;
+            padding: 0.6rem 0.9rem;
+            border-radius: 0.75rem;
+            margin-bottom: 0.5rem;
+            word-wrap: break-word;
+            font-size: 0.95rem;
+            line-height: 1.3;
+            box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+        }
+        .message-bubble.sent {
+            background-color: #dcf8c6; /* Green for sent messages */
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .message-bubble.received {
+            background-color: #ffffff; /* White for received messages */
+            align-self: flex-start;
+            margin-right: auto;
+        }
+        .message-bubble .timestamp {
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 0.2rem;
+            text-align: right;
+            display: block;
+        }
+        .user-list-item {
+            padding: 1rem;
+            border-bottom: 1px solid #dcdcdc;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .user-list-item:hover {
+            background-color: #d9d9d9;
+        }
+        .user-list-item.active {
+            background-color: #c9c9c9;
+        }
+        .status-dot {
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+        .status-dot.online {
+            background-color: #4CAF50; /* Green */
+        }
+        .status-dot.offline {
+            background-color: #9E9E9E; /* Gray */
+        }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .loading-overlay {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 1001;
+            display: none; /* Hidden by default */
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .chat-container {
+                flex-direction: column;
+                margin: 0;
+                height: 100vh;
+                border-radius: 0;
+            }
+            .sidebar {
+                width: 100%;
+                height: 100px; /* Smaller height for mobile */
+                border-right: none;
+                border-bottom: 1px solid #c9c9c9;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-around;
+            }
+            .chat-area {
+                width: 100%;
+                flex-grow: 1;
+            }
+            .user-list-item {
+                flex-grow: 1;
+                text-align: center;
+                padding: 0.5rem;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+            .user-list-item span {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
 </head>
-<body>
-<div id="loginScreen" style="display: flex">
-  <h2>Password Protected Chat</h2>
-  <input type="password" id="accessPassword" placeholder="Enter Access Password" />
-  <select id="userSelect">
-    <option value="">Select User</option>
-    <option value="user1">User 1</option>
-    <option value="user2">User 2</option>
-  </select>
-  <button onclick="login()">Login</button>
-</div>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
 
-<div id="chatScreen">
-  <div class="chat-box">
-    <div class="header">
-      <span id="userLabel"></span>
-      <span id="statusLabel"></span>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
     </div>
-    <div class="messages" id="messageContainer"></div>
-    <div class="input-box">
-      <input type="text" id="messageInput" placeholder="Type a message" />
-      <button onclick="sendMessage()">Send</button>
+
+    <!-- Login/Password Modal -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Welcome to Chat</h2>
+            <p class="mb-4 text-gray-600">Please enter the access password:</p>
+            <input type="password" id="accessPassword" class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Enter password">
+            <button id="submitPassword" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out">Access Chat</button>
+            <p id="passwordError" class="text-red-500 text-sm mt-2 hidden">Incorrect password. Please try again.</p>
+        </div>
     </div>
-  </div>
-</div>
 
-<script>
-  const ACCESS_PASSWORD = "mysecurepass";
-  const SESSION_KEY = "chatSession";
-  const MESSAGES_KEY = "chatMessages";
+    <!-- User Selection Modal -->
+    <div id="userSelectModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Select Your User</h2>
+            <p class="mb-6 text-gray-600">Choose which user you want to be for this session:</p>
+            <div class="flex flex-col space-y-4">
+                <button id="selectUser1" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out">
+                    <i class="fas fa-user mr-2"></i> User 1
+                </button>
+                <button id="selectUser2" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out">
+                    <i class="fas fa-user mr-2"></i> User 2
+                </button>
+            </div>
+        </div>
+    </div>
 
-  let currentUser = "";
-  let otherUser = "";
+    <!-- Main Chat Interface -->
+    <div id="chatInterface" class="chat-container hidden">
+        <!-- Sidebar for User List -->
+        <div class="sidebar">
+            <div class="p-4 bg-green-600 text-white text-lg font-semibold rounded-tl-lg flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-comments mr-2"></i> Two-User Chat
+                </div>
+                <button id="logoutButton" class="bg-green-700 hover:bg-green-800 text-white text-sm py-1 px-3 rounded-full transition duration-200 ease-in-out">Logout</button>
+            </div>
+            <div class="flex-grow overflow-y-auto">
+                <div id="user1Status" class="user-list-item flex items-center justify-between">
+                    <div class="flex items-center">
+                        <span class="status-dot offline" id="dotUser1"></span>
+                        <span class="font-medium text-gray-800">User 1</span>
+                    </div>
+                    <span class="text-xs text-gray-500" id="lastSeenUser1">Offline</span>
+                </div>
+                <div id="user2Status" class="user-list-item flex items-center justify-between">
+                    <div class="flex items-center">
+                        <span class="status-dot offline" id="dotUser2"></span>
+                        <span class="font-medium text-gray-800">User 2</span>
+                    </div>
+                    <span class="text-xs text-gray-500" id="lastSeenUser2">Offline</span>
+                </div>
+            </div>
+            <div class="p-4 bg-green-500 text-white text-sm rounded-bl-lg">
+                <p>Logged in as: <span id="currentUserDisplay" class="font-bold"></span></p>
+                <p class="text-xs mt-1">Your User ID: <span id="currentUserIdDisplay" class="font-mono text-gray-200 break-all"></span></p>
+            </div>
+        </div>
 
-  function login() {
-    const password = document.getElementById("accessPassword").value;
-    const user = document.getElementById("userSelect").value;
-    if (password === ACCESS_PASSWORD && user) {
-      sessionStorage.setItem(SESSION_KEY, user);
-      location.reload();
-    } else {
-      alert("Wrong password or no user selected");
-    }
-  }
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div class="p-4 bg-green-500 text-white text-lg font-semibold rounded-tr-lg">
+                Chat with the Other User
+            </div>
+            <div id="messagesContainer" class="messages flex flex-col">
+                <!-- Messages will be appended here -->
+            </div>
+            <div class="message-input-area">
+                <input type="text" id="messageInput" class="flex-grow p-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 mr-3" placeholder="Type a message...">
+                <button id="sendMessage" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-5 rounded-full transition duration-200 ease-in-out flex items-center justify-center">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
-  function loadMessages() {
-    const container = document.getElementById("messageContainer");
-    container.innerHTML = "";
-    const messages = JSON.parse(localStorage.getItem(MESSAGES_KEY)) || [];
-    messages.forEach(msg => {
-      const div = document.createElement("div");
-      div.className = `message ${msg.sender === currentUser ? 'self' : 'other'}`;
-      div.textContent = msg.text;
-      container.appendChild(div);
-    });
-    container.scrollTop = container.scrollHeight;
-  }
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-  function sendMessage() {
-    const input = document.getElementById("messageInput");
-    const text = input.value.trim();
-    if (!text) return;
+        // Global variables provided by the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-    const messages = JSON.parse(localStorage.getItem(MESSAGES_KEY)) || [];
-    messages.push({ sender: currentUser, text });
-    localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
-    localStorage.setItem(`lastSeen_${currentUser}`, Date.now());
-    input.value = "";
-    loadMessages();
-    updateStatus();
-  }
+        let app;
+        let db;
+        let auth;
+        let currentUserId = null; // Firebase Auth UID
+        let selectedUser = null; // "user1" or "user2"
+        let currentSessionId = null; // Unique ID for the current chat session
 
-  function updateStatus() {
-    const now = Date.now();
-    const lastSeen = parseInt(localStorage.getItem(`lastSeen_${otherUser}`)) || 0;
-    const label = document.getElementById("statusLabel");
-    if (now - lastSeen < 15000) {
-      label.textContent = `${otherUser} is online`;
-    } else {
-      const date = new Date(lastSeen);
-      label.textContent = `Last seen: ${date.toLocaleTimeString()}`;
-    }
-  }
+        // DOM Elements
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const passwordModal = document.getElementById('passwordModal');
+        const accessPasswordInput = document.getElementById('accessPassword');
+        const submitPasswordButton = document.getElementById('submitPassword');
+        const passwordError = document.getElementById('passwordError');
+        const userSelectModal = document.getElementById('userSelectModal');
+        const selectUser1Button = document.getElementById('selectUser1');
+        const selectUser2Button = document.getElementById('selectUser2');
+        const chatInterface = document.getElementById('chatInterface');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendMessageButton = document.getElementById('sendMessage');
+        const currentUserDisplay = document.getElementById('currentUserDisplay');
+        const currentUserIdDisplay = document.getElementById('currentUserIdDisplay');
+        const user1StatusElem = document.getElementById('user1Status');
+        const user2StatusElem = document.getElementById('user2Status');
+        const dotUser1 = document.getElementById('dotUser1');
+        const lastSeenUser1 = document.getElementById('lastSeenUser1');
+        const dotUser2 = document.getElementById('dotUser2');
+        const lastSeenUser2 = document.getElementById('lastSeenUser2');
+        const logoutButton = document.getElementById('logoutButton');
 
-  function clearOldSession() {
-    localStorage.removeItem(MESSAGES_KEY);
-    localStorage.removeItem("lastSeen_user1");
-    localStorage.removeItem("lastSeen_user2");
-  }
+        // --- Utility Functions ---
+        function showLoading() {
+            loadingOverlay.style.display = 'flex';
+        }
 
-  function setupChat() {
-    currentUser = sessionStorage.getItem(SESSION_KEY);
-    if (!currentUser) return;
-    otherUser = currentUser === "user1" ? "user2" : "user1";
+        function hideLoading() {
+            loadingOverlay.style.display = 'none';
+        }
 
-    document.getElementById("loginScreen").style.display = "none";
-    document.getElementById("chatScreen").style.display = "flex";
-    document.getElementById("userLabel").textContent = currentUser;
+        function showModal(modalElement) {
+            modalElement.style.display = 'flex';
+        }
 
-    if (!localStorage.getItem(MESSAGES_KEY)) {
-      clearOldSession();
-    }
+        function hideModal(modalElement) {
+            modalElement.style.display = 'none';
+        }
 
-    loadMessages();
-    setInterval(() => {
-      localStorage.setItem(`lastSeen_${currentUser}`, Date.now());
-      updateStatus();
-    }, 5000);
-  }
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
 
-  window.onload = () => {
-    setupChat();
-  };
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return '';
+            const date = timestamp.toDate(); // Convert Firestore Timestamp to Date object
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
 
-  window.onblur = () => sessionStorage.removeItem(SESSION_KEY);
-</script>
+            if (date.toDateString() === today.toDateString()) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } else if (date.toDateString() === yesterday.toDateString()) {
+                return `Yesterday ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            } else {
+                return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+            }
+        }
+
+        // --- Firebase Initialization and Authentication ---
+        async function initializeFirebase() {
+            showLoading();
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Sign in using the provided token or anonymously
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                // Listen for auth state changes
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        currentUserIdDisplay.textContent = currentUserId;
+                        console.log("Firebase Auth UID:", currentUserId);
+                        // After auth, proceed to check application password
+                        checkApplicationAccess();
+                    } else {
+                        currentUserId = null;
+                        currentUserIdDisplay.textContent = 'Not logged in';
+                        console.log("User signed out or not authenticated.");
+                        // If user logs out, show password modal
+                        showPasswordModal();
+                    }
+                    hideLoading();
+                });
+
+            } catch (error) {
+                console.error("Error initializing Firebase or signing in:", error);
+                alert("Failed to initialize chat. Please check console for details.");
+                hideLoading();
+            }
+        }
+
+        async function checkApplicationAccess() {
+            const storedSessionId = sessionStorage.getItem('chatSessionId');
+            const storedSelectedUser = sessionStorage.getItem('selectedUser');
+
+            if (storedSessionId && storedSelectedUser) {
+                currentSessionId = storedSessionId;
+                selectedUser = storedSelectedUser;
+                currentUserDisplay.textContent = selectedUser === 'user1' ? 'User 1' : 'User 2';
+                console.log("Resuming session:", currentSessionId, "as", selectedUser);
+                setupChatListeners();
+                hideModal(passwordModal);
+                hideModal(userSelectModal);
+                chatInterface.classList.remove('hidden');
+                updateOnlineStatus(true); // Set user online
+            } else {
+                // If no session, force password entry
+                showPasswordModal();
+            }
+        }
+
+        async function showPasswordModal() {
+            hideLoading();
+            hideModal(userSelectModal);
+            chatInterface.classList.add('hidden');
+            passwordModal.classList.remove('hidden'); // Ensure it's not hidden by display:none
+            showModal(passwordModal);
+            accessPasswordInput.value = ''; // Clear previous input
+            passwordError.classList.add('hidden');
+        }
+
+        async function verifyPassword() {
+            showLoading();
+            const enteredPassword = accessPasswordInput.value;
+            const settingsDocRef = doc(db, `artifacts/${appId}/public/data/settings`, 'app_settings');
+
+            try {
+                const docSnap = await getDoc(settingsDocRef);
+                let correctPassword = 'default_password'; // Fallback password
+
+                if (docSnap.exists()) {
+                    correctPassword = docSnap.data().password || correctPassword;
+                } else {
+                    // If settings doc doesn't exist, create it with a default password
+                    await setDoc(settingsDocRef, { password: correctPassword });
+                    console.log("Created default app settings with password.");
+                }
+
+                if (enteredPassword === correctPassword) {
+                    passwordError.classList.add('hidden');
+                    hideModal(passwordModal);
+                    showUserSelection();
+                } else {
+                    passwordError.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Error verifying password:", error);
+                passwordError.textContent = "Error verifying password. Check console.";
+                passwordError.classList.remove('hidden');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function showUserSelection() {
+            hideLoading();
+            hideModal(passwordModal);
+            chatInterface.classList.add('hidden');
+            showModal(userSelectModal);
+        }
+
+        function selectUser(user) {
+            selectedUser = user;
+            currentUserDisplay.textContent = user === 'user1' ? 'User 1' : 'User 2';
+            currentSessionId = generateUUID(); // Generate new session ID for new chat
+            sessionStorage.setItem('chatSessionId', currentSessionId);
+            sessionStorage.setItem('selectedUser', selectedUser);
+            console.log("New session started:", currentSessionId, "as", selectedUser);
+
+            hideModal(userSelectModal);
+            chatInterface.classList.remove('hidden');
+            messagesContainer.innerHTML = ''; // Clear old chat messages
+            setupChatListeners();
+            updateOnlineStatus(true); // Set user online
+        }
+
+        // --- Chat Functionality ---
+        function displayMessage(message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message-bubble', 'flex', 'flex-col');
+
+            const messageText = document.createElement('span');
+            messageText.textContent = message.text;
+
+            const timestampSpan = document.createElement('span');
+            timestampSpan.classList.add('timestamp');
+            timestampSpan.textContent = formatTimestamp(message.timestamp);
+
+            messageElement.appendChild(messageText);
+            messageElement.appendChild(timestampSpan);
+
+            if (message.sender === selectedUser) {
+                messageElement.classList.add('sent', 'bg-green-200', 'self-end', 'rounded-br-none');
+            } else {
+                messageElement.classList.add('received', 'bg-white', 'self-start', 'rounded-bl-none');
+            }
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to bottom
+        }
+
+        async function sendMessage() {
+            const text = messageInput.value.trim();
+            if (text === '') return;
+
+            if (!db || !currentSessionId || !selectedUser) {
+                console.error("Firebase not initialized or session/user not set.");
+                alert("Chat not ready. Please refresh and log in.");
+                return;
+            }
+
+            try {
+                const messagesColRef = collection(db, `artifacts/${appId}/public/data/chats/${currentSessionId}/messages`);
+                await addDoc(messagesColRef, {
+                    sender: selectedUser,
+                    text: text,
+                    timestamp: serverTimestamp()
+                });
+                messageInput.value = '';
+            } catch (error) {
+                console.error("Error sending message:", error);
+                alert("Failed to send message. Check console.");
+            }
+        }
+
+        function setupChatListeners() {
+            if (!db || !currentSessionId) return;
+
+            // Listen for messages in the current session
+            const messagesQuery = query(
+                collection(db, `artifacts/${appId}/public/data/chats/${currentSessionId}/messages`),
+                orderBy('timestamp')
+            );
+
+            onSnapshot(messagesQuery, (snapshot) => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === "added") {
+                        displayMessage(change.doc.data());
+                    }
+                    // For modifications or deletions, you might need more complex logic
+                    // For this app, we only care about new messages
+                });
+            }, (error) => {
+                console.error("Error listening to messages:", error);
+                alert("Failed to load messages. Check console.");
+            });
+
+            // Listen for status changes of both users
+            const user1StatusRef = doc(db, `artifacts/${appId}/public/data/users`, 'user1');
+            const user2StatusRef = doc(db, `artifacts/${appId}/public/data/users`, 'user2');
+
+            onSnapshot(user1StatusRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    updateUserStatusUI('user1', data.onlineStatus, data.lastSeen);
+                }
+            }, (error) => console.error("Error listening to user1 status:", error));
+
+            onSnapshot(user2StatusRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    updateUserStatusUI('user2', data.onlineStatus, data.lastSeen);
+                }
+            }, (error) => console.error("Error listening to user2 status:", error));
+        }
+
+        async function updateOnlineStatus(isOnline) {
+            if (!db || !selectedUser) return;
+            const userStatusRef = doc(db, `artifacts/${appId}/public/data/users`, selectedUser);
+            try {
+                await setDoc(userStatusRef, {
+                    onlineStatus: isOnline,
+                    lastSeen: isOnline ? null : serverTimestamp()
+                }, { merge: true }); // Use merge to only update specified fields
+            } catch (error) {
+                console.error("Error updating online status:", error);
+            }
+        }
+
+        function updateUserStatusUI(user, onlineStatus, lastSeenTimestamp) {
+            const dotElem = user === 'user1' ? dotUser1 : dotUser2;
+            const lastSeenElem = user === 'user1' ? lastSeenUser1 : lastSeenUser2;
+
+            dotElem.classList.remove('online', 'offline');
+            if (onlineStatus) {
+                dotElem.classList.add('online');
+                lastSeenElem.textContent = 'Online';
+            } else {
+                dotElem.classList.add('offline');
+                lastSeenElem.textContent = lastSeenTimestamp ? `Last seen ${formatTimestamp(lastSeenTimestamp)}` : 'Offline';
+            }
+        }
+
+        // --- Event Listeners ---
+        submitPasswordButton.addEventListener('click', verifyPassword);
+        accessPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                verifyPassword();
+            }
+        });
+
+        selectUser1Button.addEventListener('click', () => selectUser('user1'));
+        selectUser2Button.addEventListener('click', () => selectUser('user2'));
+
+        sendMessageButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        logoutButton.addEventListener('click', async () => {
+            showLoading();
+            try {
+                await updateOnlineStatus(false); // Set user offline
+                sessionStorage.removeItem('chatSessionId');
+                sessionStorage.removeItem('selectedUser');
+                await signOut(auth); // Sign out from Firebase Auth
+                console.log("User logged out.");
+                // onAuthStateChanged listener will handle showing password modal
+            } catch (error) {
+                console.error("Error during logout:", error);
+                alert("Logout failed. Check console.");
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // Handle tab visibility for online status
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                updateOnlineStatus(false);
+            } else {
+                // Only update to online if a user is selected and session is active
+                if (selectedUser && currentSessionId) {
+                    updateOnlineStatus(true);
+                }
+            }
+        });
+
+        // Handle page unload for online status
+        window.addEventListener('beforeunload', () => {
+            updateOnlineStatus(false);
+        });
+
+        // --- Initialize on window load ---
+        window.onload = initializeFirebase;
+
+    </script>
 </body>
 </html>
