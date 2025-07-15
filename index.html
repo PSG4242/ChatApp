@@ -81,6 +81,11 @@
             text-align: right;
             display: block;
         }
+        .message-bubble img {
+            max-width: 100%;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+        }
         .user-list-item {
             padding: 1rem;
             border-bottom: 1px solid #dcdcdc;
@@ -233,12 +238,15 @@
         </div>
     </div>
 
-    <!-- Summary Modal -->
-    <div id="summaryModal" class="modal">
+    <!-- Confirmation Modal (for Clear Chat) -->
+    <div id="confirmationModal" class="modal">
         <div class="modal-content">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Chat Summary ✨</h2>
-            <p id="summaryText" class="mb-6 text-gray-700 text-left whitespace-pre-wrap"></p>
-            <button id="closeSummaryModal" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out">Close</button>
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Confirm Action</h2>
+            <p id="confirmationMessage" class="mb-6 text-gray-700"></p>
+            <div class="flex justify-center space-x-4">
+                <button id="confirmYes" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200 ease-in-out">Yes</button>
+                <button id="confirmNo" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition duration-200 ease-in-out">No</button>
+            </div>
         </div>
     </div>
 
@@ -276,17 +284,21 @@
 
         <!-- Chat Area -->
         <div class="chat-area">
-            <div class="p-4 bg-green-500 text-white text-lg font-semibold rounded-tr-lg">
+            <div class="p-4 bg-green-500 text-white text-lg font-semibold rounded-tr-lg flex items-center justify-between">
                 Chat with the Other User
+                <button id="clearChatButton" class="bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-4 rounded-full transition duration-200 ease-in-out flex items-center">
+                    <i class="fas fa-trash-alt mr-2"></i> Clear Chat
+                </button>
             </div>
             <div id="messagesContainer" class="messages flex flex-col">
                 <!-- Messages will be appended here -->
             </div>
             <div class="message-input-area">
-                <input type="text" id="messageInput" class="flex-grow p-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 mr-3" placeholder="Type a message...">
-                <button id="summarizeChatButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-5 rounded-full transition duration-200 ease-in-out flex items-center justify-center">
-                    <i class="fas fa-magic mr-2"></i> ✨ Summarize Chat
+                <input type="file" id="imageInput" accept="image/*" class="hidden">
+                <button id="sendImageButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-5 rounded-full transition duration-200 ease-in-out flex items-center justify-center">
+                    <i class="fas fa-image"></i>
                 </button>
+                <input type="text" id="messageInput" class="flex-grow p-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 mr-3" placeholder="Type a message...">
                 <button id="sendMessage" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-5 rounded-full transition duration-200 ease-in-out flex items-center justify-center">
                     <i class="fas fa-paper-plane"></i>
                 </button>
@@ -298,7 +310,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, limit, serverTimestamp, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, limit, serverTimestamp, addDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- START: Firebase Configuration for Netlify Deployment ---
         // These are your actual Firebase project configuration details.
@@ -361,11 +373,14 @@
         const dotUser2 = document.getElementById('dotUser2');
         const lastSeenUser2 = document.getElementById('lastSeenUser2'); 
         const logoutButton = document.getElementById('logoutButton');
-        // New DOM elements for summary feature
-        const summarizeChatButton = document.getElementById('summarizeChatButton');
-        const summaryModal = document.getElementById('summaryModal');
-        const summaryText = document.getElementById('summaryText');
-        const closeSummaryModalButton = document.getElementById('closeSummaryModal');
+        // New DOM elements for clear chat and image sharing
+        const clearChatButton = document.getElementById('clearChatButton');
+        const imageInput = document.getElementById('imageInput');
+        const sendImageButton = document.getElementById('sendImageButton');
+        const confirmationModal = document.getElementById('confirmationModal');
+        const confirmationMessage = document.getElementById('confirmationMessage');
+        const confirmYesButton = document.getElementById('confirmYes');
+        const confirmNoButton = document.getElementById('confirmNo');
 
 
         // --- Utility Functions ---
@@ -385,13 +400,12 @@
             modalElement.style.display = 'none';
         }
 
-        // Removed generateUUID as it's no longer needed for currentSessionId
-        // function generateUUID() {
-        //     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        //         var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-        //         return v.toString(16);
-        //     });
-        // }
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
 
         function formatTimestamp(timestamp) {
             if (!timestamp) return '';
@@ -556,13 +570,21 @@
             messageElement.classList.add('message-bubble', 'flex', 'flex-col');
 
             const messageText = document.createElement('span');
-            messageText.textContent = message.text;
-
             const timestampSpan = document.createElement('span');
             timestampSpan.classList.add('timestamp');
             timestampSpan.textContent = formatTimestamp(message.timestamp);
 
-            messageElement.appendChild(messageText);
+            if (message.text) {
+                messageText.textContent = message.text;
+                messageElement.appendChild(messageText);
+            } else if (message.imageUrl) {
+                const imgElement = document.createElement('img');
+                imgElement.src = message.imageUrl;
+                imgElement.alt = "Shared Image";
+                imgElement.classList.add('max-w-full', 'h-auto', 'rounded-lg', 'my-1');
+                messageElement.appendChild(imgElement);
+            }
+            
             messageElement.appendChild(timestampSpan);
 
             if (message.sender === selectedUser) {
@@ -592,10 +614,34 @@
                     timestamp: serverTimestamp()
                 });
                 messageInput.value = '';
-                console.log("Message sent successfully.");
+                console.log("Text message sent successfully.");
             } catch (error) {
                 console.error("Error sending message:", error);
                 alert("Failed to send message. Check console.");
+            }
+        }
+
+        async function sendImage(imageData) {
+            if (!db || !selectedUser) {
+                console.error("Firebase not initialized or user not set. Cannot send image.");
+                alert("Chat not ready. Please refresh and log in.");
+                return;
+            }
+
+            showLoading();
+            try {
+                const messagesColRef = collection(db, `artifacts/${appId}/public/data/chats/${currentSessionId}/messages`);
+                await addDoc(messagesColRef, {
+                    sender: selectedUser,
+                    imageUrl: imageData, // Store base64 image data
+                    timestamp: serverTimestamp()
+                });
+                console.log("Image sent successfully.");
+            } catch (error) {
+                console.error("Error sending image:", error);
+                alert("Failed to send image. Check console. (Note: Large images might fail due to Firestore document size limits).");
+            } finally {
+                hideLoading();
             }
         }
 
@@ -680,79 +726,50 @@
             }
         }
 
-        // --- Gemini AI Integration for Summarization ---
-        async function summarizeChat() {
-            if (!db) { // currentSessionId is now a constant
-                alert("Chat not active. Please select a user and start chatting to summarize.");
+        // --- Clear Chat Functionality ---
+        async function clearChat() {
+            if (!db || !currentSessionId) {
+                alert("Chat not active. Cannot clear messages.");
+                return;
+            }
+
+            showConfirmationModal("Are you sure you want to clear all messages from this chat? This action cannot be undone.");
+
+            // Use promises to wait for confirmation
+            const confirmed = await new Promise(resolve => {
+                confirmYesButton.onclick = () => { hideModal(confirmationModal); resolve(true); };
+                confirmNoButton.onclick = () => { hideModal(confirmationModal); resolve(false); };
+            });
+
+            if (!confirmed) {
+                console.log("Clear chat cancelled by user.");
                 return;
             }
 
             showLoading();
-            summaryText.textContent = "Generating summary...";
-            showModal(summaryModal);
-
             try {
-                const messagesQuery = query(
-                    collection(db, `artifacts/${appId}/public/data/chats/${currentSessionId}/messages`),
-                    orderBy('timestamp', 'desc'), // Get most recent messages first
-                    limit(20) // Limit to the last 20 messages for summarization context
-                );
-                const querySnapshot = await getDocs(messagesQuery); // Use getDocs for a one-time fetch
+                const messagesColRef = collection(db, `artifacts/${appId}/public/data/chats/${currentSessionId}/messages`);
+                const querySnapshot = await getDocs(messagesColRef);
 
-                if (querySnapshot.empty) {
-                    summaryText.textContent = "No messages to summarize yet.";
-                    hideLoading();
-                    return;
-                }
-
-                let chatHistoryForLLM = "";
-                // Reverse the order to feed to LLM from oldest to newest for better context
-                const messages = querySnapshot.docs.map(doc => doc.data()).reverse();
-
-                messages.forEach(msg => {
-                    chatHistoryForLLM += `${msg.sender}: ${msg.text}\n`;
+                const deletePromises = [];
+                querySnapshot.forEach((doc) => {
+                    deletePromises.push(deleteDoc(doc.ref));
                 });
 
-                const prompt = `Please summarize the following chat conversation:\n\n${chatHistoryForLLM}\nSummary:`;
-
-                const apiKey = ""; // Canvas will provide this automatically, or it's empty for Netlify
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-                const payload = {
-                    contents: [{ role: "user", parts: [{ text: prompt }] }]
-                };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error("Gemini API error:", errorData);
-                    throw new Error(`Gemini API responded with status ${response.status}: ${errorData.error.message || 'Unknown error'}`);
-                }
-
-                const result = await response.json();
-                console.log("Gemini API response:", result);
-
-                if (result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                    const text = result.candidates[0].content.parts[0].text;
-                    summaryText.textContent = text;
-                } else {
-                    summaryText.textContent = "Could not generate summary. No valid response from AI.";
-                    console.warn("Unexpected Gemini API response structure:", result);
-                }
-
+                await Promise.all(deletePromises);
+                console.log("All messages cleared successfully.");
+                messagesContainer.innerHTML = ''; // Clear UI immediately
             } catch (error) {
-                console.error("Error summarizing chat:", error);
-                summaryText.textContent = `Error generating summary: ${error.message}`;
+                console.error("Error clearing chat messages:", error);
+                alert("Failed to clear chat. Check console.");
             } finally {
                 hideLoading();
             }
+        }
+
+        function showConfirmationModal(message) {
+            confirmationMessage.textContent = message;
+            showModal(confirmationModal);
         }
 
         // --- Event Listeners ---
@@ -789,9 +806,30 @@
             }
         });
 
-        // New event listener for the summarize button
-        summarizeChatButton.addEventListener('click', summarizeChat);
-        closeSummaryModalButton.addEventListener('click', () => hideModal(summaryModal));
+        // Event listener for Clear Chat button
+        clearChatButton.addEventListener('click', clearChat);
+
+        // Event listener for Image Button
+        sendImageButton.addEventListener('click', () => {
+            imageInput.click(); // Trigger the hidden file input
+        });
+
+        // Event listener for when an image file is selected
+        imageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        sendImage(e.target.result); // Send base64 image data
+                    };
+                    reader.readAsDataURL(file); // Read file as base64
+                } else {
+                    alert("Please select an image file.");
+                }
+            }
+            imageInput.value = ''; // Clear the input so same file can be selected again
+        });
 
 
         // Handle tab visibility for online status
