@@ -800,7 +800,7 @@
                 const notificationTitle = `New Message from ${message.sender}`;
                 let notificationBody = "";
                 if (message.text) {
-                    notificationBody = message.text;
+                    notificationBody = "Sent a message."; // Concise notification for text
                 } else if (message.imageUrl) {
                     notificationBody = "Sent an image.";
                 }
