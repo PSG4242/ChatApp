@@ -31,12 +31,16 @@
             display: flex;
             flex-direction: column;
         }
-        .chat-area {
-            flex-grow: 1;
-            width: 70%;
-            background-color: #f8f8f8; /* Chat background */
+        .sidebar-header {
+            padding: 1rem;
+            background-color: #22c55e; /* Green-600 */
+            color: white;
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600; /* font-semibold */
+            border-top-left-radius: 1rem;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
         }
         .message-input-area {
             background-color: #f0f0f0;
@@ -45,6 +49,17 @@
             display: flex;
             align-items: center;
             gap: 0.5rem; /* Added gap for spacing buttons */
+        }
+        .chat-area-header {
+            padding: 1rem;
+            background-color: #22c55e; /* Green-500 */
+            color: white;
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600; /* font-semibold */
+            border-top-right-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         .messages {
             flex-grow: 1;
@@ -130,10 +145,10 @@
             border-radius: 0.75rem;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             text-align: center;
-            max-width: 600px; /* Wider for summary */
+            max-width: 600px;
             width: 90%;
-            max-height: 80vh; /* Limit height */
-            overflow-y: auto; /* Scroll if content overflows */
+            max-height: 80vh;
+            overflow-y: auto;
         }
         .loading-overlay {
             display: flex;
@@ -170,36 +185,79 @@
             }
             .sidebar {
                 width: 100%;
-                height: 100px; /* Smaller height for mobile */
+                height: auto; /* Allow content to dictate height */
                 border-right: none;
                 border-bottom: 1px solid #c9c9c9;
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-around;
+                flex-direction: column; /* Stack header and user list vertically */
+                border-radius: 0; /* No rounded corners on mobile sidebar */
             }
-            .chat-area {
-                width: 100%;
-                flex-grow: 1;
+            .sidebar-header {
+                padding: 0.75rem 1rem; /* Slightly less padding */
+                font-size: 1rem; /* Smaller font */
+                border-radius: 0; /* Remove rounded corners on top for full width */
             }
-            .message-input-area {
-                flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
-                justify-content: center;
+            .logout-button { /* Specific class for logout button */
+                padding: 0.25rem 0.75rem;
+                font-size: 0.75rem;
             }
-            .message-input-area button {
-                flex-grow: 1; /* Allow buttons to take more space */
-                margin-top: 0.5rem; /* Add some top margin for wrapped buttons */
+            .sidebar .flex-grow.overflow-y-auto { /* User list container */
+                display: flex; /* Use flexbox for horizontal layout */
+                flex-direction: row; /* Make user list horizontal */
+                overflow-x: auto; /* Allow horizontal scroll for user list */
+                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+                white-space: nowrap; /* Prevent wrapping of user items */
+                padding: 0.5rem 0;
+                border-bottom: 1px solid #dcdcdc;
             }
             .user-list-item {
-                flex-grow: 1;
-                text-align: center;
-                padding: 0.5rem;
-                display: flex;
-                flex-direction: column;
+                display: inline-flex; /* Display horizontally */
+                flex-direction: column; /* Stack dot and name vertically within item */
                 align-items: center;
                 justify-content: center;
+                padding: 0.5rem;
+                border-bottom: none; /* Remove individual borders */
+                width: auto; /* Allow content width */
+                min-width: 80px; /* Ensure minimum width for touch target */
+                flex-shrink: 0; /* Prevent shrinking */
             }
             .user-list-item span {
-                font-size: 0.8rem;
+                font-size: 0.7rem; /* Smaller font for status */
+            }
+            .user-list-item .font-medium {
+                font-size: 0.9rem; /* Slightly larger for name */
+            }
+            .status-dot {
+                margin-right: 0; /* Remove margin to center dot above name */
+                margin-bottom: 0.2rem; /* Space between dot and name */
+            }
+
+            .chat-area-header { /* Chat header */
+                flex-direction: column; /* Stack title and clear chat button */
+                align-items: center;
+                padding: 0.75rem 1rem;
+                border-radius: 0;
+            }
+            .chat-area #clearChatButton {
+                margin-top: 0.5rem;
+                width: 100%; /* Full width button */
+            }
+
+            .message-input-area {
+                flex-direction: column; /* Stack input and buttons vertically */
+                align-items: stretch; /* Stretch items to full width */
+            }
+            .message-input-area input[type="text"] {
+                margin-right: 0; /* Remove right margin */
+                margin-bottom: 0.5rem; /* Add bottom margin */
+                width: 100%; /* Ensure full width */
+            }
+            .message-input-area button {
+                width: 100%; /* Make buttons full width */
+                margin-right: 0 !important; /* Override any existing right margin */
+                margin-bottom: 0.5rem; /* Add margin between stacked buttons */
+            }
+            .message-input-area button:last-child {
+                margin-bottom: 0; /* No bottom margin for the last button */
             }
         }
     </style>
@@ -254,11 +312,11 @@
     <div id="chatInterface" class="chat-container hidden">
         <!-- Sidebar for User List -->
         <div class="sidebar">
-            <div class="p-4 bg-green-600 text-white text-lg font-semibold rounded-tl-lg flex items-center justify-between">
+            <div class="sidebar-header">
                 <div class="flex items-center">
                     <i class="fas fa-comments mr-2"></i> Two-User Chat
                 </div>
-                <button id="logoutButton" class="bg-green-700 hover:bg-green-800 text-white text-sm py-1 px-3 rounded-full transition duration-200 ease-in-out">Logout</button>
+                <button id="logoutButton" class="bg-green-700 hover:bg-green-800 text-white text-sm py-1 px-3 rounded-full transition duration-200 ease-in-out logout-button">Logout</button>
             </div>
             <div class="flex-grow overflow-y-auto">
                 <div id="user1Status" class="user-list-item flex items-center justify-between">
@@ -284,7 +342,7 @@
 
         <!-- Chat Area -->
         <div class="chat-area">
-            <div class="p-4 bg-green-500 text-white text-lg font-semibold rounded-tr-lg flex items-center justify-between">
+            <div class="chat-area-header">
                 Chat with the Other User
                 <button id="clearChatButton" class="bg-red-500 hover:bg-red-600 text-white text-sm py-2 px-4 rounded-full transition duration-200 ease-in-out flex items-center">
                     <i class="fas fa-trash-alt mr-2"></i> Clear Chat
