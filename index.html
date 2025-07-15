@@ -458,6 +458,9 @@
                     hideLoading();
                 });
 
+                // Request notification permission on load
+                requestNotificationPermission();
+
             } catch (error) {
                 console.error("Error initializing Firebase or signing in:", error);
                 // More specific error message for auth/configuration-not-found
@@ -659,10 +662,16 @@
 
             onSnapshot(messagesQuery, (snapshot) => {
                 console.log("Messages snapshot received. Changes:", snapshot.docChanges().length);
-                // Clear existing messages to re-render all messages from the shared chat room
-                messagesContainer.innerHTML = '';
-                snapshot.docs.forEach(doc => {
-                    displayMessage(doc.data());
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === "added") {
+                        const newMessage = change.doc.data();
+                        displayMessage(newMessage); // Display the message in UI
+
+                        // Trigger notification if the tab is hidden and the message is not from the current user
+                        if (document.hidden && newMessage.sender !== selectedUser) {
+                            showNotification(newMessage);
+                        }
+                    }
                 });
                 messagesContainer.scrollTop = messagesContainer.scrollHeight; // Scroll to bottom
             }, (error) => {
@@ -770,6 +779,46 @@
         function showConfirmationModal(message) {
             confirmationMessage.textContent = message;
             showModal(confirmationModal);
+        }
+
+        // --- Browser Notification Functions ---
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                console.warn("This browser does not support desktop notification.");
+                return;
+            }
+
+            if (Notification.permission === "default") {
+                Notification.requestPermission().then(permission => {
+                    console.log("Notification permission:", permission);
+                });
+            }
+        }
+
+        function showNotification(message) {
+            if (Notification.permission === "granted") {
+                const notificationTitle = `New Message from ${message.sender}`;
+                let notificationBody = "";
+                if (message.text) {
+                    notificationBody = message.text;
+                } else if (message.imageUrl) {
+                    notificationBody = "Sent an image.";
+                }
+
+                const notificationOptions = {
+                    body: notificationBody,
+                    icon: 'https://placehold.co/48x48/008000/FFFFFF?text=Chat' // Simple chat icon
+                };
+
+                const notification = new Notification(notificationTitle, notificationOptions);
+
+                notification.onclick = function() {
+                    window.focus(); // Bring the browser tab to focus when clicked
+                    this.close(); // Close the notification
+                };
+            } else {
+                console.warn("Notification permission not granted.");
+            }
         }
 
         // --- Event Listeners ---
