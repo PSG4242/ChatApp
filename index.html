@@ -1,154 +1,195 @@
-// index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Two-User Secure Chat</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Two User Chat</title>
   <style>
-    body { font-family: sans-serif; background: #f0f0f0; padding: 20px; }
-    .chat-box { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
-    .message { margin: 5px 0; padding: 8px 12px; border-radius: 5px; }
-    .sender { background-color: #d1e7dd; }
-    .receiver { background-color: #f8d7da; }
-    #msgInput { width: 70%; padding: 8px; margin: 5px; }
-    button { padding: 8px 12px; }
-    .status { font-size: 0.9em; color: gray; margin-bottom: 10px; }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      background-color: #e5ddd5;
+    }
+    #loginScreen, #chatScreen {
+      display: none;
+      height: 100vh;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    #chatScreen {
+      display: flex;
+    }
+    .chat-box {
+      width: 100%;
+      max-width: 600px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .header {
+      background: #075e54;
+      color: white;
+      padding: 1em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .messages {
+      flex: 1;
+      padding: 1em;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+    }
+    .input-box {
+      display: flex;
+      border-top: 1px solid #ccc;
+    }
+    .input-box input {
+      flex: 1;
+      padding: 1em;
+      border: none;
+      outline: none;
+    }
+    .input-box button {
+      padding: 1em;
+      border: none;
+      background: #128c7e;
+      color: white;
+      cursor: pointer;
+    }
+    .message.self {
+      align-self: flex-end;
+      background: #dcf8c6;
+      padding: 0.5em 1em;
+      border-radius: 10px;
+    }
+    .message.other {
+      align-self: flex-start;
+      background: #fff;
+      padding: 0.5em 1em;
+      border-radius: 10px;
+    }
   </style>
 </head>
 <body>
+<div id="loginScreen" style="display: flex">
+  <h2>Password Protected Chat</h2>
+  <input type="password" id="accessPassword" placeholder="Enter Access Password" />
+  <select id="userSelect">
+    <option value="">Select User</option>
+    <option value="user1">User 1</option>
+    <option value="user2">User 2</option>
+  </select>
+  <button onclick="login()">Login</button>
+</div>
+
+<div id="chatScreen">
   <div class="chat-box">
-    <h2>🔐 Two-User Secure Chat</h2>
-    <div id="status" class="status"></div>
-    <div id="messages" style="max-height: 300px; overflow-y: auto;"></div>
-    <input type="text" id="msgInput" placeholder="Type a message" />
-    <button onclick="sendMessage()">Send</button>
-    <button onclick="downloadMessages()">📥 Download</button>
-    <button onclick="deleteMessages()">🗑️ Delete All</button>
+    <div class="header">
+      <span id="userLabel"></span>
+      <span id="statusLabel"></span>
+    </div>
+    <div class="messages" id="messageContainer"></div>
+    <div class="input-box">
+      <input type="text" id="messageInput" placeholder="Type a message" />
+      <button onclick="sendMessage()">Send</button>
+    </div>
   </div>
-  <audio id="notifySound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
+</div>
 
-  <script>
-    const USERS = {
-      user1: "pass1",
-      user2: "pass2"
-    };
+<script>
+  const ACCESS_PASSWORD = "mysecurepass";
+  const SESSION_KEY = "chatSession";
+  const MESSAGES_KEY = "chatMessages";
 
-    let currentUser = "";
-    let lastMessageLength = 0;
+  let currentUser = "";
+  let otherUser = "";
 
-    async function login() {
-      const user = prompt("Enter username (user1 or user2):").trim();
-      const pass = prompt("Enter your password:").trim();
-
-      if (USERS[user] !== pass) {
-        alert("Incorrect username or password.");
-        return login();
-      }
-
-      sessionStorage.setItem("chat_user", user);
-      currentUser = user;
-      await updateStatus("online");
-      loadMessages();
-      fetchStatus();
-      setInterval(loadMessages, 5000);
-      setInterval(fetchStatus, 10000);
-    }
-
-    async function updateStatus(status) {
-      if (!currentUser) return;
-      await fetch("/api/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: currentUser, status })
-      });
-    }
-
-    async function fetchStatus() {
-      const res = await fetch("/api/status");
-      const data = await res.json();
-      const otherUser = currentUser === "user1" ? "user2" : "user1";
-
-      const statusText = data[otherUser]?.status === "online"
-        ? `${otherUser} is 🟢 online`
-        : `${otherUser} is 🔴 offline (Last seen: ${data[otherUser]?.lastSeen})`;
-
-      document.getElementById("status").innerText = statusText;
-    }
-
-    async function loadMessages() {
-      const res = await fetch("/api/chat");
-      const data = await res.json();
-      const container = document.getElementById("messages");
-      const notifySound = document.getElementById("notifySound");
-      const prevLength = container.children.length;
-
-      container.innerHTML = "";
-
-      data.messages.forEach(msg => {
-        const div = document.createElement("div");
-        div.className = "message " + (msg.sender === currentUser ? "sender" : "receiver");
-        div.textContent = `${msg.sender}: ${msg.text}`;
-        container.appendChild(div);
-      });
-
-      // Auto scroll to bottom
-      container.scrollTop = container.scrollHeight;
-
-      // Play notification if new message received
-      if (container.children.length > prevLength) {
-        notifySound.play();
-      }
-    }
-
-    async function sendMessage() {
-      const input = document.getElementById("msgInput");
-      const text = input.value.trim();
-      if (!text) return;
-
-      const receiver = currentUser === "user1" ? "user2" : "user1";
-      await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sender: currentUser, receiver, text })
-      });
-
-      input.value = "";
-      loadMessages();
-    }
-
-    async function downloadMessages() {
-      const res = await fetch("/api/chat");
-      const data = await res.json();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "chat_history.json";
-      link.click();
-    }
-
-    async function deleteMessages() {
-      if (!confirm("Are you sure you want to delete all messages?")) return;
-      await fetch("/api/chat", {
-        method: "DELETE"
-      });
-      loadMessages();
-    }
-
-    window.addEventListener("beforeunload", () => updateStatus("offline"));
-    window.addEventListener("blur", () => updateStatus("offline"));
-    window.addEventListener("focus", () => updateStatus("online"));
-
-    if (!sessionStorage.getItem("chat_user")) {
-      login();
+  function login() {
+    const password = document.getElementById("accessPassword").value;
+    const user = document.getElementById("userSelect").value;
+    if (password === ACCESS_PASSWORD && user) {
+      sessionStorage.setItem(SESSION_KEY, user);
+      location.reload();
     } else {
-      currentUser = sessionStorage.getItem("chat_user");
-      updateStatus("online");
-      loadMessages();
-      fetchStatus();
-      setInterval(loadMessages, 5000);
-      setInterval(fetchStatus, 10000);
+      alert("Wrong password or no user selected");
     }
-  </script>
+  }
+
+  function loadMessages() {
+    const container = document.getElementById("messageContainer");
+    container.innerHTML = "";
+    const messages = JSON.parse(localStorage.getItem(MESSAGES_KEY)) || [];
+    messages.forEach(msg => {
+      const div = document.createElement("div");
+      div.className = `message ${msg.sender === currentUser ? 'self' : 'other'}`;
+      div.textContent = msg.text;
+      container.appendChild(div);
+    });
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function sendMessage() {
+    const input = document.getElementById("messageInput");
+    const text = input.value.trim();
+    if (!text) return;
+
+    const messages = JSON.parse(localStorage.getItem(MESSAGES_KEY)) || [];
+    messages.push({ sender: currentUser, text });
+    localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+    localStorage.setItem(`lastSeen_${currentUser}`, Date.now());
+    input.value = "";
+    loadMessages();
+    updateStatus();
+  }
+
+  function updateStatus() {
+    const now = Date.now();
+    const lastSeen = parseInt(localStorage.getItem(`lastSeen_${otherUser}`)) || 0;
+    const label = document.getElementById("statusLabel");
+    if (now - lastSeen < 15000) {
+      label.textContent = `${otherUser} is online`;
+    } else {
+      const date = new Date(lastSeen);
+      label.textContent = `Last seen: ${date.toLocaleTimeString()}`;
+    }
+  }
+
+  function clearOldSession() {
+    localStorage.removeItem(MESSAGES_KEY);
+    localStorage.removeItem("lastSeen_user1");
+    localStorage.removeItem("lastSeen_user2");
+  }
+
+  function setupChat() {
+    currentUser = sessionStorage.getItem(SESSION_KEY);
+    if (!currentUser) return;
+    otherUser = currentUser === "user1" ? "user2" : "user1";
+
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("chatScreen").style.display = "flex";
+    document.getElementById("userLabel").textContent = currentUser;
+
+    if (!localStorage.getItem(MESSAGES_KEY)) {
+      clearOldSession();
+    }
+
+    loadMessages();
+    setInterval(() => {
+      localStorage.setItem(`lastSeen_${currentUser}`, Date.now());
+      updateStatus();
+    }, 5000);
+  }
+
+  window.onload = () => {
+    setupChat();
+  };
+
+  window.onblur = () => sessionStorage.removeItem(SESSION_KEY);
+</script>
 </body>
 </html>
