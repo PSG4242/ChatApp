@@ -274,30 +274,39 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, orderBy, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Global variables provided by the Canvas environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+        // --- START: Firebase Configuration for Netlify Deployment ---
+        // These are your actual Firebase project configuration details.
+        const firebaseConfig = {
+            apiKey: "AIzaSyBrKf3uyJ7KBRCytvuBPhQvUmRxUaonLqA",
+            authDomain: "chat-5b980.firebaseapp.com",
+            databaseURL: "https://chat-5b980-default-rtdb.firebaseio.com", // Note: This is for Realtime Database, Firestore is used here.
+            projectId: "chat-5b980",
+            storageBucket: "chat-5b980.firebasestorage.app",
+            messagingSenderId: "969653973738",
+            appId: "1:969653973738:web:eb74d5126b959905f91d93",
+            measurementId: "G-HSG8K652DY"
+        };
 
-        console.log("App ID:", appId);
-        console.log("Firebase Config:", firebaseConfig);
-        console.log("Initial Auth Token available:", initialAuthToken ? "Yes" : "No");
+        // For Firestore paths, the 'appId' in '/artifacts/{appId}/public/data/' refers to the Project ID.
+        const appId = firebaseConfig.projectId;
 
-        // --- Added check for projectId in firebaseConfig ---
-        if (!firebaseConfig.projectId) {
-            console.error("CRITICAL ERROR: Firebase 'projectId' is missing from the configuration. Please ensure your Canvas environment is correctly linked to a Firebase project.");
-            // Display a user-friendly message in the modal
-            document.getElementById('loadingOverlay').style.display = 'none'; // Hide loading
-            document.getElementById('passwordModal').style.display = 'flex'; // Show password modal
-            document.getElementById('passwordError').textContent = "Firebase connection failed. Project ID missing. Please check console for details and ensure Firebase is set up correctly.";
+        // --- END: Firebase Configuration for Netlify Deployment ---
+
+        console.log("App ID (derived for Netlify):", appId);
+        console.log("Firebase Config (hardcoded for Netlify):", firebaseConfig);
+
+        // This check will now only trigger if values are truly missing or malformed.
+        if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.appId) {
+            console.error("CRITICAL ERROR: Firebase configuration is incomplete or malformed. Please verify all fields.");
+            document.getElementById('loadingOverlay').style.display = 'none';
+            document.getElementById('passwordModal').style.display = 'flex';
+            document.getElementById('passwordError').textContent = "Firebase config missing or incorrect. Please check console for details.";
             document.getElementById('passwordError').classList.remove('hidden');
-            // Prevent further execution if config is bad
-            throw new Error("Firebase 'projectId' missing. Cannot initialize Firebase."); 
+            throw new Error("Firebase config missing or incorrect. Cannot initialize Firebase.");
         }
-        // --- End of added check ---
 
         let app;
         let db;
@@ -314,7 +323,6 @@
         const passwordError = document.getElementById('passwordError');
         const userSelectModal = document.getElementById('userSelectModal');
         const selectUser1Button = document.getElementById('selectUser1');
-        // Fixed the incomplete line here:
         const selectUser2Button = document.getElementById('selectUser2');
         const chatInterface = document.getElementById('chatInterface');
         const messagesContainer = document.getElementById('messagesContainer');
@@ -374,21 +382,17 @@
         async function initializeFirebase() {
             showLoading();
             try {
-                // The check for firebaseConfig.projectId is now done before this function is called.
-                // If we reach here, firebaseConfig should be valid.
+                // Log the config being used for debugging
+                console.log("Initializing Firebase with config:", firebaseConfig);
+
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 console.log("Firebase app, db, and auth initialized.");
 
-                // Sign in using the provided token or anonymously
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                    console.log("Signed in with custom token.");
-                } else {
-                    await signInAnonymously(auth);
-                    console.log("Signed in anonymously.");
-                }
+                // For Netlify, we rely on anonymous sign-in
+                await signInAnonymously(auth);
+                console.log("Signed in anonymously.");
 
                 // Listen for auth state changes
                 onAuthStateChanged(auth, (user) => {
@@ -588,16 +592,6 @@
             const user1StatusRef = doc(db, `artifacts/${appId}/public/data/users`, 'user1');
             const user2StatusRef = doc(db, `artifacts/${appId}/public/data/users`, 'user2');
 
-            onSnapshot(user1StatusRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    updateUserStatusUI('user1', data.onlineStatus, data.lastSeen);
-                    console.log("User 1 status updated:", data);
-                } else {
-                    console.log("User 1 status document does not exist yet.");
-                }
-            }, (error) => console.error("Error listening to user1 status:", error));
-
             onSnapshot(user2StatusRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
@@ -607,6 +601,16 @@
                     console.log("User 2 status document does not exist yet.");
                 }
             }, (error) => console.error("Error listening to user2 status:", error));
+
+            onSnapshot(user1StatusRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    updateUserStatusUI('user1', data.onlineStatus, data.lastSeen);
+                    console.log("User 1 status updated:", data);
+                } else {
+                    console.log("User 1 status document does not exist yet.");
+                }
+            }, (error) => console.error("Error listening to user1 status:", error));
         }
 
         async function updateOnlineStatus(isOnline) {
