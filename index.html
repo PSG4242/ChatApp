@@ -289,13 +289,13 @@
         // --- Added check for projectId in firebaseConfig ---
         if (!firebaseConfig.projectId) {
             console.error("CRITICAL ERROR: Firebase 'projectId' is missing from the configuration. Please ensure your Canvas environment is correctly linked to a Firebase project.");
-            // You might want to display a user-friendly message here instead of just logging
+            // Display a user-friendly message in the modal
             document.getElementById('loadingOverlay').style.display = 'none'; // Hide loading
             document.getElementById('passwordModal').style.display = 'flex'; // Show password modal
-            document.getElementById('passwordError').textContent = "Firebase connection failed. Project ID missing. Check console for details.";
+            document.getElementById('passwordError').textContent = "Firebase connection failed. Project ID missing. Please check console for details and ensure Firebase is set up correctly.";
             document.getElementById('passwordError').classList.remove('hidden');
             // Prevent further execution if config is bad
-            throw new Error("Firebase 'projectId' missing."); 
+            throw new Error("Firebase 'projectId' missing. Cannot initialize Firebase."); 
         }
         // --- End of added check ---
 
@@ -373,6 +373,8 @@
         async function initializeFirebase() {
             showLoading();
             try {
+                // The check for firebaseConfig.projectId is now done before this function is called.
+                // If we reach here, firebaseConfig should be valid.
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
@@ -445,6 +447,15 @@
         async function verifyPassword() {
             showLoading();
             const enteredPassword = accessPasswordInput.value;
+            // Ensure db is initialized before proceeding
+            if (!db) {
+                console.error("Firestore instance (db) is not initialized. Cannot verify password.");
+                passwordError.textContent = "Chat not ready. Firebase not initialized.";
+                passwordError.classList.remove('hidden');
+                hideLoading();
+                return;
+            }
+
             const settingsDocRef = doc(db, `artifacts/${appId}/public/data/settings`, 'app_settings');
 
             try {
