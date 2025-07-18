@@ -50,6 +50,13 @@
             align-items: center;
             gap: 0.5rem; /* Added gap for spacing buttons */
         }
+        .chat-area {
+            flex-grow: 1;
+            width: 70%;
+            background-color: #f8f8f8; /* Chat background */
+            display: flex;
+            flex-direction: column; /* Ensure chat area is a flex column */
+        }
         .chat-area-header {
             padding: 1rem;
             background-color: #22c55e; /* Green-500 */
@@ -62,9 +69,9 @@
             justify-content: space-between;
         }
         .messages {
-            flex-grow: 1;
+            flex-grow: 1; /* Allow messages to take remaining space */
             padding: 1rem;
-            overflow-y: auto;
+            overflow-y: auto; /* Enable vertical scrolling */
             background-image: url('https://placehold.co/600x400/DCE0E3/808080?text=Chat+Background'); /* Placeholder background */
             background-size: cover;
             background-position: center;
@@ -175,121 +182,128 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Responsive adjustments */
+        /* Responsive adjustments for mobile */
         @media (max-width: 768px) {
             html, body {
-                box-sizing: border-box; /* Ensure consistent box model */
-                height: 100%; /* Full height for body */
-                overflow: hidden; /* Prevent body scroll if container handles it */
+                box-sizing: border-box;
+                height: 100%;
+                overflow: hidden;
             }
             .chat-container {
                 flex-direction: column;
-                margin: 0; /* Remove margin on small screens */
-                height: 100vh; /* Take full viewport height */
-                border-radius: 0; /* No rounded corners on full-screen mobile */
-                box-shadow: none; /* Remove shadow for full-screen apps */
+                margin: 0;
+                height: 100vh; /* Full viewport height */
+                border-radius: 0;
+                box-shadow: none;
             }
             .sidebar {
                 width: 100%;
-                height: auto; /* Allow content to dictate height */
+                height: auto;
                 border-right: none;
                 border-bottom: 1px solid #c9c9c9;
-                flex-direction: column; /* Stack header and user list vertically */
-                border-radius: 0; /* No rounded corners on mobile sidebar */
+                flex-direction: column;
+                border-radius: 0;
             }
             .sidebar-header {
-                padding: 0.75rem 1rem; /* Slightly less padding */
-                font-size: 1rem; /* Smaller font */
-                border-radius: 0; /* Remove rounded corners on top for full width */
+                padding: 0.5rem 0.75rem; /* Smaller padding */
+                font-size: 0.9rem; /* Smaller font */
+                border-radius: 0;
             }
-            .logout-button { /* Specific class for logout button */
-                padding: 0.25rem 0.75rem;
-                font-size: 0.75rem;
+            .logout-button {
+                padding: 0.15rem 0.5rem; /* Even smaller padding */
+                font-size: 0.65rem; /* Smaller font */
             }
-            .sidebar .flex-grow.overflow-y-auto { /* User list container */
-                display: flex; /* Use flexbox for horizontal layout */
-                flex-direction: row; /* Make user list horizontal */
-                overflow-x: auto; /* Allow horizontal scroll for user list */
-                -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-                white-space: nowrap; /* Prevent wrapping of user items */
-                padding: 0.5rem 0;
+            .sidebar .flex-grow.overflow-y-auto {
+                display: flex;
+                flex-direction: row;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                white-space: nowrap;
+                padding: 0.25rem 0; /* Reduced padding */
                 border-bottom: 1px solid #dcdcdc;
-                justify-content: flex-start; /* Align items to start */
-                align-items: flex-start; /* Align items to top */
+                justify-content: flex-start;
+                align-items: flex-start;
             }
             .user-list-item {
-                display: inline-flex; /* Display horizontally */
-                flex-direction: column; /* Stack dot and name vertically within item */
+                display: inline-flex;
+                flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                padding: 0.5rem;
-                border-bottom: none; /* Remove individual borders */
-                width: auto; /* Allow content width */
-                min-width: 80px; /* Ensure minimum width for touch target */
-                flex-shrink: 0; /* Prevent shrinking */
-                margin: 0 0.25rem; /* Small horizontal margin between items */
+                padding: 0.4rem; /* Reduced padding */
+                border-bottom: none;
+                width: auto;
+                min-width: 70px; /* Adjusted min-width */
+                flex-shrink: 0;
+                margin: 0 0.15rem; /* Reduced horizontal margin */
             }
             .user-list-item span {
-                font-size: 0.7rem; /* Smaller font for status */
+                font-size: 0.65rem; /* Smaller font for status */
             }
             .user-list-item .font-medium {
-                font-size: 0.9rem; /* Slightly larger for name */
-                text-align: center; /* Center name under dot */
-                white-space: normal; /* Allow name to wrap if too long */
+                font-size: 0.8rem; /* Adjusted font for name */
+                text-align: center;
+                white-space: normal;
             }
             .status-dot {
-                margin-right: 0; /* Remove margin to center dot above name */
-                margin-bottom: 0.2rem; /* Space between dot and name */
+                width: 0.6rem; /* Smaller dot */
+                height: 0.6rem; /* Smaller dot */
+                margin-right: 0;
+                margin-bottom: 0.15rem; /* Reduced margin */
             }
 
             .chat-area {
                 width: 100%;
                 flex-grow: 1;
-                display: flex; /* Ensure flex column for chat area */
+                display: flex;
                 flex-direction: column;
             }
 
-            .chat-area-header { /* Chat header */
-                flex-direction: column; /* Stack title and clear chat button */
+            .chat-area-header {
+                flex-direction: column;
                 align-items: center;
-                padding: 0.75rem 1rem;
+                padding: 0.5rem 0.75rem; /* Smaller padding */
+                font-size: 0.9rem; /* Smaller font */
                 border-radius: 0;
             }
             .chat-area #clearChatButton {
-                margin-top: 0.5rem;
-                width: 100%; /* Full width button */
+                margin-top: 0.4rem; /* Reduced margin */
+                width: 100%;
+                padding: 0.4rem 0.8rem; /* Smaller padding */
+                font-size: 0.75rem; /* Smaller font */
             }
 
             .messages {
-                flex-grow: 1; /* Allow messages to take remaining space */
-                padding: 0.5rem; /* Slightly less padding */
+                flex-grow: 1;
+                padding: 0.5rem;
             }
 
             .message-bubble {
-                max-width: 85%; /* Allow bubbles to take more width on small screens */
-                padding: 0.5rem 0.75rem; /* Slightly smaller padding */
-                font-size: 0.85rem; /* Slightly smaller font for messages */
+                max-width: 90%; /* Increased max-width for better use of space */
+                padding: 0.5rem 0.75rem;
+                font-size: 0.85rem;
             }
 
             .message-input-area {
-                flex-direction: column; /* Stack input and buttons vertically */
-                align-items: stretch; /* Stretch items to full width */
-                padding: 0.75rem; /* Slightly less padding */
+                flex-direction: column;
+                align-items: stretch;
+                padding: 0.5rem; /* Reduced padding */
             }
             .message-input-area input[type="text"] {
-                margin-right: 0; /* Remove right margin */
-                margin-bottom: 0.5rem; /* Add bottom margin */
-                width: 100%; /* Ensure full width */
-                padding: 0.75rem; /* Consistent padding */
+                margin-right: 0;
+                margin-bottom: 0.4rem; /* Reduced margin */
+                width: 100%;
+                padding: 0.6rem; /* Adjusted padding */
+                font-size: 0.85rem; /* Adjusted font size */
             }
             .message-input-area button {
-                width: 100%; /* Make buttons full width */
-                margin-right: 0 !important; /* Override any existing right margin */
-                margin-bottom: 0.5rem; /* Add margin between stacked buttons */
-                padding: 0.75rem 1rem; /* Adjust button padding */
+                width: 100%;
+                margin-right: 0 !important;
+                margin-bottom: 0.4rem; /* Reduced margin */
+                padding: 0.6rem 1rem; /* Adjusted padding */
+                font-size: 0.85rem; /* Adjusted font size */
             }
             .message-input-area button:last-child {
-                margin-bottom: 0; /* No bottom margin for the last button */
+                margin-bottom: 0;
             }
         }
     </style>
@@ -304,7 +318,7 @@
     <!-- Login/Password Modal -->
     <div id="passwordModal" class="modal">
         <div class="modal-content">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Welcome to ChatBox</h2>
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Welcome to Chat</h2>
             <p class="mb-4 text-gray-600">Please enter the access password:</p>
             <input type="password" id="accessPassword" class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Enter password">
             <button id="submitPassword" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 ease-in-out">Access Chat</button>
@@ -738,6 +752,43 @@
             }
         }
 
+        // Function to resize image before sending
+        function resizeImage(file, maxWidth, maxHeight, callback) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Calculate the new dimensions
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height *= maxWidth / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width *= maxHeight / height;
+                            height = maxHeight;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convert canvas to Data URL (Base64)
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7); // Use JPEG for smaller size, 0.7 quality
+                    callback(dataUrl);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
         function setupChatListeners() {
             if (!db) { // currentSessionId is now a constant
                 console.warn("Firestore not ready for listeners.");
@@ -958,11 +1009,10 @@
             const file = event.target.files[0];
             if (file) {
                 if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        sendImage(e.target.result); // Send base64 image data
-                    };
-                    reader.readAsDataURL(file); // Read file as base64
+                    // Resize image before sending
+                    resizeImage(file, 800, 800, (resizedDataUrl) => { // Max 800px on longest side
+                        sendImage(resizedDataUrl);
+                    });
                 } else {
                     alert("Please select an image file.");
                 }
